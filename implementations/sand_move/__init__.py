@@ -17,6 +17,10 @@ w_height = 600
 
 group_size = 64
 
+## light settings
+lightPos = np.array([1.2, 1.0, 2.0], dtype=np.float32)
+lightColor = np.array([1.0, 1.0, 1.0], dtype=np.float32)
+
 N = 30  # número de cubos por lado
 model_matrices = []
 
@@ -58,9 +62,11 @@ def sand_move():
 
     GL.glGenBuffers(1, vbo)
     GL.glBindBuffer(GL.GL_ARRAY_BUFFER, vbo)
-    GL.glBufferData(GL.GL_ARRAY_BUFFER, cube_data["position"].nbytes, cube_data["position"], GL.GL_STATIC_DRAW)
+    GL.glBufferData(GL.GL_ARRAY_BUFFER, cube_data["position_normals"].nbytes, cube_data["position_normals"], GL.GL_STATIC_DRAW)
     GL.glEnableVertexAttribArray(0)
-    GL.glVertexAttribPointer(0, 3, GL.GL_FLOAT, GL.GL_FALSE, 12, ctypes.c_void_p(0))
+    GL.glVertexAttribPointer(0, 3, GL.GL_FLOAT, GL.GL_FALSE, 24, ctypes.c_void_p(0))
+    GL.glEnableVertexAttribArray(1)
+    GL.glVertexAttribPointer(1, 3, GL.GL_FLOAT, GL.GL_FALSE, 24, ctypes.c_void_p(12))
     
     GL.glGenBuffers(1, ibo)
     GL.glBindBuffer(GL.GL_ELEMENT_ARRAY_BUFFER, ibo)
@@ -98,6 +104,10 @@ def sand_move():
         GL.glEnable(GL.GL_DEPTH_TEST)
         bg_pipeline.use()
 
+        bg_pipeline["lightPos"] = lightPos
+        bg_pipeline["lightColor"] = lightColor
+        bg_pipeline["camPos"] = camera.get_pos()
+
         # le pasamos las matrices al shader
         bg_pipeline["projection"] = camera.get_perspective().reshape(
             16, 1, order="F"
@@ -110,9 +120,9 @@ def sand_move():
         )
         GL.glBindVertexArray(vao)
         GL.glBindBuffer(GL.GL_ARRAY_BUFFER, ssbo)
-        GL.glEnableVertexAttribArray(1)
-        GL.glVertexAttribPointer(1, 4, GL.GL_FLOAT, GL.GL_FALSE, 16, ctypes.c_void_p(0))
-        GL.glVertexAttribDivisor(1, 1)
+        GL.glEnableVertexAttribArray(2)
+        GL.glVertexAttribPointer(2, 4, GL.GL_FLOAT, GL.GL_FALSE, 16, ctypes.c_void_p(0))
+        GL.glVertexAttribDivisor(2, 1)
         GL.glDrawElementsInstanced(GL.GL_TRIANGLES, len(cube_data['indices']), GL.GL_UNSIGNED_INT, None, N*N)
 
         

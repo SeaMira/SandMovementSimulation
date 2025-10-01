@@ -48,19 +48,42 @@ def rectangulo():
     }
 
 def cubo_unitario():
-    # 8 vértices del cubo (x, y, z)
     vertices = np.array([
-        # Cara trasera (z = -0.5)
-        -0.5, -0.5, -0.5,  # 0
-         0.5, -0.5, -0.5,  # 1
-         0.5,  0.5, -0.5,  # 2
-        -0.5,  0.5, -0.5,  # 3
+        # frente (z = +1)
+        -0.5, -0.5,  0.5,   0, 0, 1,
+         0.5, -0.5,  0.5,   0, 0, 1,
+         0.5,  0.5,  0.5,   0, 0, 1,
+        -0.5,  0.5,  0.5,   0, 0, 1,
 
-        # Cara delantera (z = +0.5)
-        -0.5, -0.5,  0.5,  # 4
-         0.5, -0.5,  0.5,  # 5
-         0.5,  0.5,  0.5,  # 6
-        -0.5,  0.5,  0.5   # 7
+        # atrás (z = -1)
+        -0.5, -0.5, -0.5,   0, 0, -1,
+         0.5, -0.5, -0.5,   0, 0, -1,
+         0.5,  0.5, -0.5,   0, 0, -1,
+        -0.5,  0.5, -0.5,   0, 0, -1,
+
+        # derecha (x = +1)
+         0.5, -0.5, -0.5,   1, 0, 0,
+         0.5, -0.5,  0.5,   1, 0, 0,
+         0.5,  0.5,  0.5,   1, 0, 0,
+         0.5,  0.5, -0.5,   1, 0, 0,
+
+        # izquierda (x = -1)
+        -0.5, -0.5, -0.5,  -1, 0, 0,
+        -0.5, -0.5,  0.5,  -1, 0, 0,
+        -0.5,  0.5,  0.5,  -1, 0, 0,
+        -0.5,  0.5, -0.5,  -1, 0, 0,
+
+        # arriba (y = +1)
+        -0.5,  0.5, -0.5,   0, 1, 0,
+         0.5,  0.5, -0.5,   0, 1, 0,
+         0.5,  0.5,  0.5,   0, 1, 0,
+        -0.5,  0.5,  0.5,   0, 1, 0,
+
+        # abajo (y = -1)
+        -0.5, -0.5, -0.5,   0, -1, 0,
+         0.5, -0.5, -0.5,   0, -1, 0,
+         0.5, -0.5,  0.5,   0, -1, 0,
+        -0.5, -0.5,  0.5,   0, -1, 0,
     ], dtype=np.float32)
 
     # Colores por vértice (RGB)
@@ -75,18 +98,17 @@ def cubo_unitario():
         0.3, 0.3, 0.3   # 7 gris oscuro
     ], dtype=np.float32)
 
-    # Índices para 12 triángulos (2 por cada una de las 6 caras)
     indices = np.array([
-        0, 1, 2, 2, 3, 0,   # cara trasera
-        4, 5, 6, 6, 7, 4,   # cara delantera
-        0, 4, 7, 7, 3, 0,   # cara izquierda
-        1, 5, 6, 6, 2, 1,   # cara derecha
-        3, 2, 6, 6, 7, 3,   # cara superior
-        0, 1, 5, 5, 4, 0    # cara inferior
+         0,  1,  2,  2,  3,  0,  # frente
+         4,  5,  6,  6,  7,  4,  # atrás
+         8,  9, 10, 10, 11,  8,  # derecha
+        12, 13, 14, 14, 15, 12,  # izquierda
+        16, 17, 18, 18, 19, 16,  # arriba
+        20, 21, 22, 22, 23, 20   # abajo
     ], dtype=np.uint32)
 
     return {
-        "position": vertices,
+        "position_normals": vertices,
         "color": vertex_colors,
         "indices": indices,
         "n_vertices": 8,
