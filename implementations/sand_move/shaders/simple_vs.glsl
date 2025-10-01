@@ -9,10 +9,12 @@ uniform mat4 projection;
 
 out vec3 fragColor;
 out vec3 vNormal;
+out vec3 FragPos;
 
 void main()
 {
     vec3 pos = position + vec3(globPosition);
+    FragPos = vec3(model * vec4(pos, 1.0));
     fragColor = vec3(1.0f, 0.0f, 0.0f);
     vNormal = normal;
     gl_Position = projection * view * model * vec4(pos, 1.0f);
