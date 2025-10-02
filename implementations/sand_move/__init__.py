@@ -17,25 +17,32 @@ w_height = 600
 
 group_size = 64
 
+N = 30  # número de cubos por lado
+
 ## light settings
-lightPos = np.array([1.2, 1.0, 2.0], dtype=np.float32)
+lightPos = np.array([N/2, 5.0, N/2], dtype=np.float32)
 lightColor = np.array([1.0, 1.0, 1.0], dtype=np.float32)
 
-N = 30  # número de cubos por lado
 model_matrices = []
+sand_slabs = []
+bedrock_slabs = []
 
 for i in range(N):
     for j in range(N):
         x = i - N/2
         z = j - N/2
-        h = np.random.randint(1, 6)
+        n_sand_slab = np.random.randint(1, 6)
+        n_bedrock_slab = np.random.randint(1, 3)
 
-        h = np.random.randint(1, 6)
-        model_matrices.append([x, h/2, z, 0])  # <--- lista de 4 elementos por instancia
+        model_matrices.append([x, z])  # <--- lista de 2 elementos por instancia
+        sand_slabs.append(n_sand_slab)
+        bedrock_slabs.append(n_bedrock_slab)
 
 model_matrices = np.array(model_matrices, dtype=np.float32)
 n_instances = len(model_matrices)
 
+sand_slabs = np.array(sand_slabs, dtype=np.uint32)
+bedrock_slabs = np.array(bedrock_slabs, dtype=np.uint32)
 
 window = pyglet.window.Window(width=w_width, height=w_height, caption="Camara", resizable=True)
 keys = key.KeyStateHandler()
@@ -45,7 +52,7 @@ camera = cam.Camera()
 
 @click.command("sand_move", short_help="Ejecucion de simulación de movimiento de arena")
 def sand_move():
-    global model_matrices, N, n_instances
+    global model_matrices, N, n_instances, sand_slabs, bedrock_slabs
     # primer elemento: el rectángulo de fondo
     cube_data = cubo_unitario()
 
@@ -72,11 +79,25 @@ def sand_move():
     GL.glBindBuffer(GL.GL_ELEMENT_ARRAY_BUFFER, ibo)
     GL.glBufferData(GL.GL_ELEMENT_ARRAY_BUFFER, cube_data["indices"].nbytes, cube_data["indices"], GL.GL_STATIC_DRAW)
 
-    # VBO para posiciones
+    # ssbo para posiciones
     ssbo = GL.GLuint(0)
     GL.glGenBuffers(1, ssbo)
     GL.glBindBuffer(GL.GL_SHADER_STORAGE_BUFFER, ssbo)
-    GL.glBufferData(GL.GL_SHADER_STORAGE_BUFFER, model_matrices.nbytes, model_matrices, GL.GL_DYNAMIC_DRAW)
+    GL.glBufferData(GL.GL_SHADER_STORAGE_BUFFER, model_matrices.nbytes, model_matrices, GL.GL_STATIC_DRAW)
+    GL.glBindBuffer(GL.GL_SHADER_STORAGE_BUFFER, 0)
+
+    # ssbo con contador de slabs de arena
+    sand_ssbo = GL.GLuint(0)
+    GL.glGenBuffers(1, sand_ssbo)
+    GL.glBindBuffer(GL.GL_SHADER_STORAGE_BUFFER, sand_ssbo)
+    GL.glBufferData(GL.GL_SHADER_STORAGE_BUFFER, sand_slabs.nbytes, sand_slabs, GL.GL_DYNAMIC_DRAW)
+    GL.glBindBuffer(GL.GL_SHADER_STORAGE_BUFFER, 0)
+    
+    # ssbo con contador de slabs de bedrock
+    bedrock_ssbo = GL.GLuint(0)
+    GL.glGenBuffers(1, bedrock_ssbo)
+    GL.glBindBuffer(GL.GL_SHADER_STORAGE_BUFFER, bedrock_ssbo)
+    GL.glBufferData(GL.GL_SHADER_STORAGE_BUFFER, bedrock_slabs.nbytes, bedrock_slabs, GL.GL_DYNAMIC_DRAW)
     GL.glBindBuffer(GL.GL_SHADER_STORAGE_BUFFER, 0)
     
     compute_pipeline = compute_program_pipeline(
@@ -94,7 +115,7 @@ def sand_move():
         window.clear()
 
         compute_pipeline.use()
-        compute_pipeline["time"] = time.time() % 1000
+        # compute_pipeline["time"] = time.time() % 1000
          # vinculamos el SSBO al binding 0
         GL.glBindBufferBase(GL.GL_SHADER_STORAGE_BUFFER, 0, ssbo)
         compute_pipeline.dispatch((n_instances + group_size - 1)//group_size, 1, 1)
@@ -119,10 +140,22 @@ def sand_move():
             16, 1, order="F"
         )
         GL.glBindVertexArray(vao)
+
         GL.glBindBuffer(GL.GL_ARRAY_BUFFER, ssbo)
         GL.glEnableVertexAttribArray(2)
-        GL.glVertexAttribPointer(2, 4, GL.GL_FLOAT, GL.GL_FALSE, 16, ctypes.c_void_p(0))
+        GL.glVertexAttribPointer(2, 2, GL.GL_FLOAT, GL.GL_FALSE, 8, ctypes.c_void_p(0))
         GL.glVertexAttribDivisor(2, 1)
+        
+        GL.glBindBuffer(GL.GL_ARRAY_BUFFER, sand_ssbo)
+        GL.glEnableVertexAttribArray(3)
+        GL.glVertexAttribIPointer(3, 1, GL.GL_UNSIGNED_INT, 4, ctypes.c_void_p(0))
+        GL.glVertexAttribDivisor(3, 1)
+        
+        GL.glBindBuffer(GL.GL_ARRAY_BUFFER, bedrock_ssbo)
+        GL.glEnableVertexAttribArray(4)
+        GL.glVertexAttribIPointer(4, 1, GL.GL_UNSIGNED_INT, GL.GL_FALSE, 4, ctypes.c_void_p(0))
+        GL.glVertexAttribDivisor(4, 1)
+
         GL.glDrawElementsInstanced(GL.GL_TRIANGLES, len(cube_data['indices']), GL.GL_UNSIGNED_INT, None, N*N)
 
         
