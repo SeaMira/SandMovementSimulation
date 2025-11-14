@@ -20,7 +20,7 @@ class Camera:
         self.scr_height = scr_height
         self.speed = 10.0
         self.near = 0.1
-        self.far = 100.0
+        self.far = 1000.0
 
         self.margin = 20.0
         self.edge_step = 70.0

@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 from utils.load_pipeline import load_pipeline, compute_program_pipeline
 from utils.elementos import rectangulo, cubo_unitario
+from implementations.sand_move.height_map_noise import generar_alturas
 import click
 import ctypes
 import time
@@ -17,12 +18,13 @@ w_height = 600
 
 group_size = 64
 
-N = 30  # número de cubos por lado
+N = 100  # número de cubos por lado
 
 ## light settings
-lightPos = np.array([N/2, 5.0, N/2], dtype=np.float32)
+lightPos = np.array([N/2, N, N/2], dtype=np.float32)
 lightColor = np.array([1.0, 1.0, 1.0], dtype=np.float32)
 
+alturas = generar_alturas(N, scale=0.15, octaves=3, persistence=0.7, lacunarity=1.0, base=0, top_height=6)
 model_matrices = []
 sand_slabs = []
 bedrock_slabs = []
@@ -31,7 +33,7 @@ for i in range(N):
     for j in range(N):
         x = i - N/2
         z = j - N/2
-        n_sand_slab = np.random.randint(1, 6)
+        n_sand_slab = int(alturas[i, j]) + 1  # altura suave
         n_bedrock_slab = np.random.randint(1, 3)
 
         model_matrices.append([x, z])  # <--- lista de 2 elementos por instancia
@@ -153,7 +155,7 @@ def sand_move():
         
         GL.glBindBuffer(GL.GL_ARRAY_BUFFER, bedrock_ssbo)
         GL.glEnableVertexAttribArray(4)
-        GL.glVertexAttribIPointer(4, 1, GL.GL_UNSIGNED_INT, GL.GL_FALSE, 4, ctypes.c_void_p(0))
+        GL.glVertexAttribIPointer(4, 1, GL.GL_UNSIGNED_INT, 4, ctypes.c_void_p(0))
         GL.glVertexAttribDivisor(4, 1)
 
         GL.glDrawElementsInstanced(GL.GL_TRIANGLES, len(cube_data['indices']), GL.GL_UNSIGNED_INT, None, N*N)

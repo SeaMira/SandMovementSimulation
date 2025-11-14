@@ -20,5 +20,6 @@ dependencies:
   - pyvista
   - sympy
   - pip:
-    - pyglet>=2.0.0
-    - pymunk
+      - pyglet>=2.0.0
+      - pymunk
+      - noise
