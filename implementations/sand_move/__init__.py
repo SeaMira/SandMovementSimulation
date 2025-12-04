@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 from utils.load_pipeline import load_pipeline, compute_program_pipeline
 from utils.elementos import rectangulo, cubo_unitario
+from utils.gl_utils import SSBO, setInstanceArrayAttribute, setInstanceArrayIAttribute
 from implementations.sand_move.height_map_noise import generar_alturas
 import click
 import ctypes
@@ -28,6 +29,22 @@ alturas = generar_alturas(N, scale=0.15, octaves=3, persistence=0.7, lacunarity=
 model_matrices = []
 sand_slabs = []
 bedrock_slabs = []
+
+
+def setCameraUniforms(c_camera, pipeline):
+
+    pipeline["camPos"] = c_camera.get_pos()
+
+    # le pasamos las matrices al shader
+    pipeline["projection"] = c_camera.get_perspective().reshape(
+        16, 1, order="F"
+    )
+    pipeline["view"] = c_camera.get_view().reshape(
+        16, 1, order="F"
+    )
+    pipeline["model"] = c_camera.get_model().reshape(
+        16, 1, order="F"
+    )
 
 for i in range(N):
     for j in range(N):
@@ -82,31 +99,25 @@ def sand_move():
     GL.glBufferData(GL.GL_ELEMENT_ARRAY_BUFFER, cube_data["indices"].nbytes, cube_data["indices"], GL.GL_STATIC_DRAW)
 
     # ssbo para posiciones
-    ssbo = GL.GLuint(0)
-    GL.glGenBuffers(1, ssbo)
-    GL.glBindBuffer(GL.GL_SHADER_STORAGE_BUFFER, ssbo)
-    GL.glBufferData(GL.GL_SHADER_STORAGE_BUFFER, model_matrices.nbytes, model_matrices, GL.GL_STATIC_DRAW)
-    GL.glBindBuffer(GL.GL_SHADER_STORAGE_BUFFER, 0)
+    global_positions_ssbo = SSBO(model_matrices, GL.GL_STATIC_DRAW)
 
     # ssbo con contador de slabs de arena
-    sand_ssbo = GL.GLuint(0)
-    GL.glGenBuffers(1, sand_ssbo)
-    GL.glBindBuffer(GL.GL_SHADER_STORAGE_BUFFER, sand_ssbo)
-    GL.glBufferData(GL.GL_SHADER_STORAGE_BUFFER, sand_slabs.nbytes, sand_slabs, GL.GL_DYNAMIC_DRAW)
-    GL.glBindBuffer(GL.GL_SHADER_STORAGE_BUFFER, 0)
+    sand_ssbo = SSBO(sand_slabs, GL.GL_DYNAMIC_DRAW)
     
     # ssbo con contador de slabs de bedrock
-    bedrock_ssbo = GL.GLuint(0)
-    GL.glGenBuffers(1, bedrock_ssbo)
-    GL.glBindBuffer(GL.GL_SHADER_STORAGE_BUFFER, bedrock_ssbo)
-    GL.glBufferData(GL.GL_SHADER_STORAGE_BUFFER, bedrock_slabs.nbytes, bedrock_slabs, GL.GL_DYNAMIC_DRAW)
-    GL.glBindBuffer(GL.GL_SHADER_STORAGE_BUFFER, 0)
+    bedrock_ssbo = SSBO(bedrock_slabs, GL.GL_DYNAMIC_DRAW)
     
     compute_pipeline = compute_program_pipeline(
         Path(os.path.dirname(__file__)) / "shaders" / "simple_compute.glsl"
     )
     
+    def instanceAttributes():
+        setInstanceArrayAttribute(global_positions_ssbo.get_SSBO_id(), 2, 2, GL.GL_FLOAT, 8)
+        
+        setInstanceArrayIAttribute(sand_ssbo.get_SSBO_id(), 3, 1, GL.GL_UNSIGNED_INT, 4)
 
+        setInstanceArrayIAttribute(bedrock_ssbo.get_SSBO_id(), 4, 1, GL.GL_UNSIGNED_INT, 4)
+        
 
     @window.event
     def on_draw():
@@ -119,7 +130,7 @@ def sand_move():
         compute_pipeline.use()
         # compute_pipeline["time"] = time.time() % 1000
          # vinculamos el SSBO al binding 0
-        GL.glBindBufferBase(GL.GL_SHADER_STORAGE_BUFFER, 0, ssbo)
+        global_positions_ssbo.bind_SSBO_to_position(0)
         compute_pipeline.dispatch((n_instances + group_size - 1)//group_size, 1, 1)
         GL.glMemoryBarrier(GL.GL_SHADER_STORAGE_BARRIER_BIT)
 
@@ -129,34 +140,10 @@ def sand_move():
 
         bg_pipeline["lightPos"] = lightPos
         bg_pipeline["lightColor"] = lightColor
-        bg_pipeline["camPos"] = camera.get_pos()
+        setCameraUniforms(camera, bg_pipeline)
 
-        # le pasamos las matrices al shader
-        bg_pipeline["projection"] = camera.get_perspective().reshape(
-            16, 1, order="F"
-        )
-        bg_pipeline["view"] = camera.get_view().reshape(
-            16, 1, order="F"
-        )
-        bg_pipeline["model"] = camera.get_model().reshape(
-            16, 1, order="F"
-        )
         GL.glBindVertexArray(vao)
-
-        GL.glBindBuffer(GL.GL_ARRAY_BUFFER, ssbo)
-        GL.glEnableVertexAttribArray(2)
-        GL.glVertexAttribPointer(2, 2, GL.GL_FLOAT, GL.GL_FALSE, 8, ctypes.c_void_p(0))
-        GL.glVertexAttribDivisor(2, 1)
-        
-        GL.glBindBuffer(GL.GL_ARRAY_BUFFER, sand_ssbo)
-        GL.glEnableVertexAttribArray(3)
-        GL.glVertexAttribIPointer(3, 1, GL.GL_UNSIGNED_INT, 4, ctypes.c_void_p(0))
-        GL.glVertexAttribDivisor(3, 1)
-        
-        GL.glBindBuffer(GL.GL_ARRAY_BUFFER, bedrock_ssbo)
-        GL.glEnableVertexAttribArray(4)
-        GL.glVertexAttribIPointer(4, 1, GL.GL_UNSIGNED_INT, 4, ctypes.c_void_p(0))
-        GL.glVertexAttribDivisor(4, 1)
+        instanceAttributes()
 
         GL.glDrawElementsInstanced(GL.GL_TRIANGLES, len(cube_data['indices']), GL.GL_UNSIGNED_INT, None, N*N)
 
