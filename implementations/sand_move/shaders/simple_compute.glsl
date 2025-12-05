@@ -1,20 +1,22 @@
 #version 430
 
-layout(local_size_x = 64) in;  // 64 hilos por work group
+layout(local_size_x = 32, local_size_y = 32) in;  // 64 hilos por work group
 
-struct CubeData {
-    vec2 position;
+layout(std430, binding = 0) buffer sand 
+{
+    uint sand_slabs[];
 };
 
-layout(std430, binding = 0) buffer Cubes {
-    CubeData cubes[];
-};
+uniform int N;
 
-// uniform float time;
+void main() 
+{
+    ivec2 coords = ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y);
 
-void main() {
-    uint id = gl_GlobalInvocationID.x;
-    if (id >= cubes.length()) return;
+    if (coords.x*coords.y > N*N) return;
+
+    // sand_slabs[N*coords.x + coords.y] += uint(1);
+
 
     // Movimiento simple: altura "flotante"
     // cubes[id].position.y += sin(time + float(id)) * 0.01f;
