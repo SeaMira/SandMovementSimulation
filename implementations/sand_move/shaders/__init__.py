@@ -22,11 +22,10 @@ group_size = 64
 N = 100  # número de cubos por lado
 
 ## light settings
-lightDir = np.array([1.0, -1.0, 0.0], dtype=np.float32) * (1.0/(2.0**(1.0/2.0)))
+lightPos = np.array([N/2, N, N/2], dtype=np.float32)
 lightColor = np.array([1.0, 1.0, 1.0], dtype=np.float32)
 
-sand_heights = generar_alturas(N, scale=0.15, octaves=3, persistence=0.7, lacunarity=1.0, base=0, top_height=6)
-bedrock_heights = generar_alturas(N, scale=0.15, octaves=3, persistence=0.7, lacunarity=1.0, base=1, top_height=6)
+alturas = generar_alturas(N, scale=0.15, octaves=3, persistence=0.7, lacunarity=1.0, base=0, top_height=6)
 model_matrices = []
 sand_slabs = []
 bedrock_slabs = []
@@ -51,8 +50,8 @@ for i in range(N):
     for j in range(N):
         x = i - N/2
         z = j - N/2
-        n_sand_slab = int(sand_heights[i, j])  # altura suave
-        n_bedrock_slab = int(bedrock_heights[i, j])
+        n_sand_slab = int(alturas[i, j]) + 1  # altura suave
+        n_bedrock_slab = np.random.randint(1, 3)
 
         model_matrices.append([x, z])  # <--- lista de 2 elementos por instancia
         sand_slabs.append(n_sand_slab)
@@ -80,9 +79,6 @@ def sand_move():
     sand_slabs_pipeline = load_pipeline(
         Path(os.path.dirname(__file__)) / "shaders" / "sand_vs.glsl", 
         Path(os.path.dirname(__file__)) / "shaders" / "sand_fs.glsl") 
-    bedrock_pipeline = load_pipeline(
-        Path(os.path.dirname(__file__)) / "shaders" / "bedrock_vs.glsl", 
-        Path(os.path.dirname(__file__)) / "shaders" / "bedrock_fs.glsl") 
 
 
     sand_render = RenderingInstance()
@@ -140,7 +136,7 @@ def sand_move():
         sand_slabs_pipeline.use()
 
         # setting uniforms
-        sand_slabs_pipeline["lightDir"] = lightDir
+        sand_slabs_pipeline["lightPos"] = lightPos
         sand_slabs_pipeline["lightColor"] = lightColor
         setCameraUniforms(camera, sand_slabs_pipeline)
 
@@ -149,24 +145,6 @@ def sand_move():
 
         # setting attributes
         instanceAttributes(True, True, True)
-
-        GL.glDrawElementsInstanced(GL.GL_TRIANGLES, len(cube_data['indices']), GL.GL_UNSIGNED_INT, None, N*N)
-        sand_render.unbind_all()
-        
-        
-        # bedrock pipeline 
-        bedrock_pipeline.use()
-
-        # setting uniforms
-        bedrock_pipeline["lightDir"] = lightDir
-        bedrock_pipeline["lightColor"] = lightColor
-        setCameraUniforms(camera, bedrock_pipeline)
-
-        # binding vertex buffers
-        sand_render.bind_all()
-
-        # setting attributes
-        instanceAttributes(True, False, True)
 
         GL.glDrawElementsInstanced(GL.GL_TRIANGLES, len(cube_data['indices']), GL.GL_UNSIGNED_INT, None, N*N)
         sand_render.unbind_all()
