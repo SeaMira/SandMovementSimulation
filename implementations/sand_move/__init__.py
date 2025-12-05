@@ -14,12 +14,13 @@ import ctypes
 import time
 # from grafica.utils import load_pipeline
 
-w_width = 800
-w_height = 600
+w_width = 1920
+w_height = 1080
 
-group_size = 64
+group_size_x = 32
+group_size_y = 32
 
-N = 100  # número de cubos por lado
+N = 512  # número de cubos por lado
 
 ## light settings
 lightDir = np.array([1.0, -1.0, 0.0], dtype=np.float32) * (1.0/(2.0**(1.0/2.0)))
@@ -68,11 +69,12 @@ window = pyglet.window.Window(width=w_width, height=w_height, caption="Camara", 
 keys = key.KeyStateHandler()
 window.push_handlers(keys)
 
-camera = cam.Camera()
+camera = cam.Camera(w_width, w_height)
+seconds = 0
 
 @click.command("sand_move", short_help="Ejecucion de simulación de movimiento de arena")
 def sand_move():
-    global model_matrices, N, n_instances, sand_slabs, bedrock_slabs
+    global model_matrices, N, n_instances, sand_slabs, bedrock_slabs, seconds
     # primer elemento: el rectángulo de fondo
     cube_data = cubo_unitario()
 
@@ -109,6 +111,10 @@ def sand_move():
         Path(os.path.dirname(__file__)) / "shaders" / "simple_compute.glsl"
     )
     
+    windfield_update_compute_pipeline = compute_program_pipeline(
+        Path(os.path.dirname(__file__)) / "shaders" / "wind_update_compute.glsl"
+    )
+    
     def instanceAttributes(positions_ssbo_bool, sand_ssbo_bool, bedrock_ssbo_bool):
         if positions_ssbo_bool:
             setInstanceArrayAttribute(global_positions_ssbo.get_SSBO_id(), 2, 2, GL.GL_FLOAT, 8, 1)
@@ -117,9 +123,13 @@ def sand_move():
         if bedrock_ssbo_bool:
             setInstanceArrayIAttribute(bedrock_ssbo.get_SSBO_id(), 4, 1, GL.GL_UNSIGNED_INT, 4, 1)
         
+    start_time = time.time() % 1000
 
     @window.event
     def on_draw():
+        global seconds
+        seconds = int(time.time() % 1000 - start_time)
+
         GL.glClearColor(0.5, 0.5, 0.5, 1.0)
         GL.glLineWidth(1.0)
         GL.glPolygonMode(GL.GL_FRONT_AND_BACK, GL.GL_FILL)
@@ -127,10 +137,11 @@ def sand_move():
         window.clear()
 
         compute_pipeline.use()
-        # compute_pipeline["time"] = time.time() % 1000
+        
          # vinculamos el SSBO al binding 0
-        global_positions_ssbo.bind_SSBO_to_position(0)
-        compute_pipeline.dispatch((n_instances + group_size - 1)//group_size, 1, 1)
+        compute_pipeline["N"] = N
+        sand_ssbo.bind_SSBO_to_position(0)
+        compute_pipeline.dispatch((N + group_size_x - 1)//group_size_x, (N + group_size_y - 1)//group_size_y, 1)
         GL.glMemoryBarrier(GL.GL_SHADER_STORAGE_BARRIER_BIT)
 
         # lo activamos a la hora de graficar nuestra escena
