@@ -22,10 +22,19 @@ layout(std430, binding = 3) buffer WindField
     vec2 wind_field[];
 };
 
+layout(std430, binding = 4) buffer WindShadowing 
+{
+    vec2 wind_shadowing[];
+};
+
 uniform int N;
 uniform float k_W = 0.005;
 uniform float k_H_50 = 5.0;
 uniform float k_H_200 = 30.0;
+uniform int R_s;
+
+uniform float theta_min = radians(10.0);
+uniform float theta_max = radians(15.0);
 
 // V(p) = A(p) * (1 + k_W*H(p))
 // W(p) = 0.2 * (F_50(p) o V(p)) + 0.8 * (F_200(p) o V(p))
@@ -99,5 +108,39 @@ void main()
 
     if (coords.x*coords.y > N*N) return;
 
-    wind_field[coords.x*N + coords.y] = W(coords.x, coords.y);
+    vec2 wind_vec = W(coords.x, coords.y);
+    wind_field[coords.x*N + coords.y] = wind_vec;
+
+    vec2 upwind = -normalize(wind_vec);
+
+    // celda base
+    int px = coords.x;
+    int py = coords.y;
+    float Hp = H(px, py);
+
+    // búsqueda de celda con mayor diferencia de altura
+    float maxDiff = -1e9;
+    ivec2 q = coords;
+
+    for (int step = 1; step <= R_s; ++step) {
+        int qx = clamp(px + int(round(upwind.x * step)), 0, N-1);
+        int qy = clamp(py + int(round(upwind.y * step)), 0, N-1);
+
+        float diff = H(qx, qy) - Hp;
+        if (diff > maxDiff) {
+            maxDiff = diff;
+            q = ivec2(qx, qy);
+        }
+    }
+
+    // calcular ángulo
+    float dist = length(vec2(q.x - px, q.y - py));
+    float alpha = atan(maxDiff / max(dist, 1e-6));
+
+    // normalizar shadow factor
+    float S = (alpha - theta_min) / (theta_max - theta_min);
+    S = clamp(S, 0.0, 1.0);
+
+    // guardar
+    wind_shadowing[coords.x*N + coords.y] = vec2(S, 0.0);    
 }

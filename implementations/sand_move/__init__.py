@@ -22,12 +22,15 @@ group_size_y = 32
 
 N = 512  # número de cubos por lado
 
+top_sand_height = 12
+top_bedrock_height = 12
+
 ## light settings
 lightDir = np.array([1.0, -1.0, 0.0], dtype=np.float32) * (1.0/(2.0**(1.0/2.0)))
 lightColor = np.array([1.0, 1.0, 1.0], dtype=np.float32)
 
-sand_heights = generar_alturas(N, scale=0.15, octaves=3, persistence=0.7, lacunarity=1.0, base=0, top_height=6)
-bedrock_heights = generar_alturas(N, scale=0.15, octaves=3, persistence=0.7, lacunarity=1.0, base=1, top_height=6)
+sand_heights = generar_alturas(N, scale=0.05, octaves=3, persistence=0.3, lacunarity=1.0, base=0, top_height=top_sand_height, tolerance = -0.5)
+bedrock_heights = generar_alturas(N, scale=0.15, octaves=3, persistence=0.7, lacunarity=1.0, base=1, top_height=top_bedrock_height, tolerance=-0.5)
 model_matrices = []
 sand_slabs = []
 bedrock_slabs = []
@@ -107,13 +110,12 @@ def sand_move():
     # ssbo con contador de slabs de bedrock
     bedrock_ssbo = SSBO(bedrock_slabs, GL.GL_DYNAMIC_DRAW)
     
-    compute_pipeline = compute_program_pipeline(
-        Path(os.path.dirname(__file__)) / "shaders" / "simple_compute.glsl"
-    )
+    shader_path = Path(os.path.dirname(__file__)) / "shaders"
+    windfield_heightfield_compute_pipeline = compute_program_pipeline(shader_path/"wind_heightfield_compute.glsl")
+    windfield_update_compute_pipeline = compute_program_pipeline(shader_path/"wind_update_compute.glsl")
+    compute_pipeline = compute_program_pipeline(shader_path/"simple_compute.glsl")
     
-    windfield_update_compute_pipeline = compute_program_pipeline(
-        Path(os.path.dirname(__file__)) / "shaders" / "wind_update_compute.glsl"
-    )
+    
     
     def instanceAttributes(positions_ssbo_bool, sand_ssbo_bool, bedrock_ssbo_bool):
         if positions_ssbo_bool:

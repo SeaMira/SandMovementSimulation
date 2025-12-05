@@ -1,7 +1,7 @@
 from noise import pnoise2
 import numpy as np
 
-def generar_alturas(N, scale=0.1, octaves=3, persistence=0.5, lacunarity=2.0, base=0, top_height=5):
+def generar_alturas(N, scale=0.1, octaves=3, persistence=0.5, lacunarity=2.0, base=0, top_height=5, tolerance=-0.5):
     alturas = np.zeros((N, N), dtype=np.float32)
     for i in range(N):
         for j in range(N):
@@ -13,5 +13,5 @@ def generar_alturas(N, scale=0.1, octaves=3, persistence=0.5, lacunarity=2.0, ba
                         lacunarity=lacunarity,
                         base=base)
             # normalizamos a [0,1] y escalamos a [0, top_height]
-            alturas[i, j] = (h + 1) * 0.5 * top_height if h > -0.5 else 0
+            alturas[i, j] = (h + 1) * 0.5 * top_height if h > tolerance else 0
     return alturas
