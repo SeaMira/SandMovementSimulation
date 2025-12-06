@@ -24,7 +24,7 @@ layout(std430, binding = 3) buffer WindField
 
 layout(std430, binding = 4) buffer WindShadowing 
 {
-    vec2 wind_shadowing[];
+    float wind_shadowing[];
 };
 
 uniform int N;
@@ -142,5 +142,5 @@ void main()
     S = clamp(S, 0.0, 1.0);
 
     // guardar
-    wind_shadowing[coords.x*N + coords.y] = vec2(S, 0.0);    
+    wind_shadowing[coords.x*N + coords.y] = S;    
 }
