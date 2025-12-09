@@ -78,6 +78,22 @@ seconds = 0
 @click.command("sand_move", short_help="Ejecucion de simulación de movimiento de arena")
 def sand_move():
     global model_matrices, N, n_instances, sand_slabs, bedrock_slabs, seconds
+
+    # --- AGREGA ESTO PARA VERIFICAR LA GPU ---
+    print("-" * 30)
+    print("REPORTE DE GPU:")
+    vendor = GL.glGetString(GL.GL_VENDOR).decode()
+    renderer = GL.glGetString(GL.GL_RENDERER).decode()
+    version = GL.glGetString(GL.GL_VERSION).decode()
+    print(f"Vendor:   {vendor}")
+    print(f"Renderer: {renderer}") # <--- AQUÍ DEBE DECIR NVIDIA / AMD
+    print(f"OpenGL:   {version}")
+    print("-" * 30)
+    
+    if "Intel" in renderer or "Microsoft" in renderer:
+        print("⚠️ PRECAUCIÓN: Estás usando la GPU Integrada. El rendimiento será bajo.")
+        print("Configura 'Alto Rendimiento' en Windows para python.exe")
+
     # primer elemento: el rectángulo de fondo
     cube_data = cubo_unitario()
 
@@ -111,6 +127,7 @@ def sand_move():
     bedrock_ssbo = SSBO(bedrock_slabs, GL.GL_DYNAMIC_DRAW)
     
     shader_path = Path(os.path.dirname(__file__)) / "shaders"
+    print(shader_path)
     windfield_heightfield_compute_pipeline = compute_program_pipeline(shader_path/"wind_heightfield_compute.glsl")
     windfield_update_compute_pipeline = compute_program_pipeline(shader_path/"wind_update_compute.glsl")
     compute_pipeline = compute_program_pipeline(shader_path/"simple_compute.glsl")
@@ -127,6 +144,10 @@ def sand_move():
         
     start_time = time.time() % 1000
 
+    fps_display = pyglet.window.FPSDisplay(window=window)
+    fps_display.label.font_size = 24  # Opcional: hacerlo más grande
+    fps_display.label.color = (255, 0, 0, 255) # Opcional: color rojo para que contraste
+
     @window.event
     def on_draw():
         global seconds
@@ -140,8 +161,8 @@ def sand_move():
 
         compute_pipeline.use()
         
-         # vinculamos el SSBO al binding 0
-        compute_pipeline["N"] = N
+        # compute_pipeline["N"] = N
+        # vinculamos el SSBO al binding 0
         sand_ssbo.bind_SSBO_to_position(0)
         compute_pipeline.dispatch((N + group_size_x - 1)//group_size_x, (N + group_size_y - 1)//group_size_y, 1)
         GL.glMemoryBarrier(GL.GL_SHADER_STORAGE_BARRIER_BIT)
@@ -183,6 +204,8 @@ def sand_move():
 
         GL.glDrawElementsInstanced(GL.GL_TRIANGLES, len(cube_data['indices']), GL.GL_UNSIGNED_INT, None, N*N)
         sand_render.unbind_all()
+
+        fps_display.draw()
 
         
 
