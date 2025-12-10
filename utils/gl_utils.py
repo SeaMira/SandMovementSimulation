@@ -18,28 +18,36 @@ def setInstanceArrayIAttribute(buffer_id, position, n_values, type, n_bytes, div
 
 
 class SSBO:
-    def __init__(self):
-        self.id = GL.GLuint(0)
-        GL.glGenBuffers(1, self.id)
+
+    def __init__(self, data=None, n_bytes=None, usage=None):
+        self.id = GL.glGenBuffers(1)
+        if n_bytes and usage:
+            self.setup_SSBO(data, n_bytes, usage)
+
         print("Generated SSBO with id", self.id)
 
-    def __init__(self, data, n_bytes, usage):
-        self.id = GL.GLuint(0)
+    # def __init__(self):
+    #     self.id = GL.GLuint(0)
+    #     GL.glGenBuffers(1, self.id)
+    #     print("Generated SSBO with id", self.id)
 
-        GL.glGenBuffers(1, self.id)
-        GL.glBindBuffer(GL.GL_SHADER_STORAGE_BUFFER, self.id)
-        GL.glBufferData(GL.GL_SHADER_STORAGE_BUFFER, n_bytes, data, usage)
-        GL.glBindBuffer(GL.GL_SHADER_STORAGE_BUFFER, 0)
-        print("Generated SSBO with id", self.id)
+    # def __init__(self, data, n_bytes, usage):
+    #     self.id = GL.GLuint(0)
+
+    #     GL.glGenBuffers(1, self.id)
+    #     GL.glBindBuffer(GL.GL_SHADER_STORAGE_BUFFER, self.id)
+    #     GL.glBufferData(GL.GL_SHADER_STORAGE_BUFFER, n_bytes, data, usage)
+    #     GL.glBindBuffer(GL.GL_SHADER_STORAGE_BUFFER, 0)
+    #     print("Generated SSBO with id", self.id)
     
-    def __init__(self, array : np.array, usage):
-        self.id = GL.GLuint(0)
+    # def __init__(self, array : np.array, usage):
+    #     self.id = GL.GLuint(0)
 
-        GL.glGenBuffers(1, self.id)
-        GL.glBindBuffer(GL.GL_SHADER_STORAGE_BUFFER, self.id)
-        GL.glBufferData(GL.GL_SHADER_STORAGE_BUFFER, array.nbytes, array, usage)
-        GL.glBindBuffer(GL.GL_SHADER_STORAGE_BUFFER, 0)
-        print("Generated SSBO with id", self.id)
+    #     GL.glGenBuffers(1, self.id)
+    #     GL.glBindBuffer(GL.GL_SHADER_STORAGE_BUFFER, self.id)
+    #     GL.glBufferData(GL.GL_SHADER_STORAGE_BUFFER, array.nbytes, array, usage)
+    #     GL.glBindBuffer(GL.GL_SHADER_STORAGE_BUFFER, 0)
+    #     print("Generated SSBO with id", self.id)
 
     def setup_SSBO(self, data, n_bytes, usage):
         GL.glBindBuffer(GL.GL_SHADER_STORAGE_BUFFER, self.id)

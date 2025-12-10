@@ -11,11 +11,6 @@ layout(std430, binding = 1) buffer sand {
     uint sand_slabs[];
 };
 
-// Campo de viento “base” (A) y campo de viento proyectado (W) si lo necesitas
-layout(std430, binding = 2) buffer WindHeightField {
-    vec2 wind_height_field[]; // A(p) precargado o generado
-};
-
 layout(std430, binding = 3) buffer WindField {
     vec2 wind_field[]; // W(p), si lo calculas en otra pasada
 };
@@ -31,7 +26,7 @@ layout(std430, binding = 6) buffer ErosionMask {
 
 uniform int N;                // tamaño de la grilla (N x N)
 uniform float cell_size_m;    // tamaño de celda en metros (p.ej. 1.0)
-uniform float h_max;          // límite superior de altura de cliff (metros o “unidades” de H)
+uniform float h_max;          // límite superior de altura de cliff (metros o unidades de H)
 uniform float kb;             // bias (p.ej. 0.1)
 uniform float slope_deg_thresh;  // umbral de 55.0 deg
 uniform int R_s;       // límite de pasos al retroceder (p.ej. 10)
@@ -46,11 +41,8 @@ float H(int x, int y) {
     return float(sand_slabs[idx(x,y)]) + float(bedrock_slabs[idx(x,y)]);
 }
 
-// Dirección upwind a partir de un campo de viento W; si no lo tienes, usa wind_height_field
 vec2 windAt(int x, int y) {
-    // Usa wind_field si ya lo calculaste; si no, usa wind_height_field como aproximación
     return wind_field[idx(x,y)];
-    // return wind_height_field[idx(x,y)]; // alternativa si W todavía no existe
 }
 
 void main() {
@@ -71,14 +63,14 @@ void main() {
     }
     vec2 upwind = -Wp / windLen;
 
-    // Paso 1: detectar cliff cell contra el viento (primer vecino con “dropoff” > umbral)
+    // Paso 1: detectar cliff cell contra el viento (primer vecino con dropoff > umbral)
     // Caminamos al menos 1 celda contra el viento para comparar alturas
     int cliff_x = px;
     int cliff_y = py;
     bool found_cliff = false;
 
     {
-        // Primer vecino “inmediato” contra el viento
+        // Primer vecino inmediato contra el viento
         int qx = clamp(px + int(round(upwind.x)), 0, N-1);
         int qy = clamp(py + int(round(upwind.y)), 0, N-1);
 
@@ -106,7 +98,7 @@ void main() {
         int cy = py;
         float Hp = H(cx, cy);
 
-        for (int step = 1; step <= max_steps; ++step) {
+        for (int step = 1; step <= R_s; ++step) {
             int nx = clamp(px + int(round(upwind.x * step)), 0, N-1);
             int ny = clamp(py + int(round(upwind.y * step)), 0, N-1);
 
@@ -114,7 +106,7 @@ void main() {
             float horiz_dist = length(vec2(nx - cx, ny - cy)) * cell_size_m;
             horiz_dist = max(horiz_dist, 1e-6);
 
-            float dh = Hp - Hn; // dropoff respecto al vecino “anterior” en la marcha
+            float dh = Hp - Hn; // dropoff respecto al vecino anterior en la marcha
             float slope_deg = degrees(atan(dh / horiz_dist));
 
             if (slope_deg > slope_deg_thresh) {
@@ -176,7 +168,7 @@ void main() {
         // Sticky si d ∈ [0.4 h_o, 2 h_o]
         else if (d_from_cliff <= d_max_sticky) {
             float t = (d_from_cliff - d_min_sticky) / max(d_max_sticky - d_min_sticky, 1e-6);
-            // “inverse percentage through the range”: primera sticky (cerca de 0.4 h_o) -> 1+kb, más lejos -> 0+kb
+            // inverse percentage through the range: primera sticky (cerca de 0.4 h_o) -> 1+kb, más lejos -> 0+kb
             // Interpretamos que el valor final se clampa a [0,1] y sumamos kb como sesgo:
             float base = 1.0 - t;              // 1 en el inicio, 0 al final
             sticky_val = kb + base * (1.0 - kb);
