@@ -31,6 +31,9 @@ h_max = 24
 kb = 0.1
 slope_deg_thresh = 55.0
 sand_transport_block_count = 2
+repose_angle = 33.0
+transfer_rate = 0.25
+cascade_iterations = 10
 
 ## light settings
 lightDir = np.array([1.0, -1.0, 0.0], dtype=np.float32) * (1.0/(2.0**(1.0/2.0)))
@@ -166,6 +169,7 @@ def sand_move():
     wind_update_compute = compute_program_pipeline(shader_path/"wind_update_compute.glsl")
     sticky_mask_compute = compute_program_pipeline(shader_path/"sticky_mask_generation.glsl")
     sand_transport_compute = compute_program_pipeline(shader_path/"sand_transport_compute.glsl")
+    sand_cascade_compute = compute_program_pipeline(shader_path/"sand_cascade_compute.glsl")
     
     
     
@@ -260,6 +264,22 @@ def sand_move():
             obstacles_ssbo.bind_SSBO_to_position(7)
             sand_transport_compute.dispatch(gridBlocksX, gridBlocksY, 1)
             GL.glMemoryBarrier(GL.GL_SHADER_STORAGE_BARRIER_BIT)
+            
+            ####################
+            ## SAND CASCADE
+            sand_cascade_compute.use()
+            sand_cascade_compute["N"] = N
+            sand_cascade_compute["cell_size_m"] = cell_size_m
+            sand_cascade_compute["tan_repose_angle"] = np.tan(np.radians(repose_angle))
+            sand_cascade_compute["transfer_rate"] = transfer_rate
+
+            bedrock_ssbo.bind_SSBO_to_position(0)
+            sand_ssbo.bind_SSBO_to_position(1)
+            obstacles_ssbo.bind_SSBO_to_position(7)
+
+            for _ in range(cascade_iterations):
+                sand_cascade_compute.dispatch(gridBlocksX, gridBlocksY, 1)
+                GL.glMemoryBarrier(GL.GL_SHADER_STORAGE_BARRIER_BIT)
 
         seconds = this_frame_sec
         # lo activamos a la hora de graficar nuestra escena
