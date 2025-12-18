@@ -35,17 +35,17 @@ void main()
     int px = coords.x;
     int py = coords.y;
     ///////////////////
-    // float Hp = max(H(px, py), 1.0);
+    float Hp = max(H(px, py), 1.0);
 
-    // float alpha = atan(float(py), float(px) + 0.01);
-    // wind_height_field[px*N + py] = log(Hp)*vec2(cos(alpha), sin(alpha));
+    float alpha = atan(float(py), float(px) + 0.01);
+    wind_height_field[px*N + py] = log(Hp)*vec2(cos(alpha), sin(alpha));
     ///////////////////
     
-    vec2 wind_dir = normalize(vec2(1.0, 0.0)); 
+    // vec2 wind_dir = normalize(vec2(1.0, 0.0)); 
     
     // Magnitud base logarítmica de la altura (como tenías)
-    float Hp = max(H(px, py), 1.0);
+    // float Hp = max(H(px, py), 1.0);
     
-    wind_height_field[px*N + py] = wind_dir;
+    // wind_height_field[px*N + py] = wind_dir;
 
 }
