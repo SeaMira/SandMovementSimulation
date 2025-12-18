@@ -26,29 +26,6 @@ class SSBO:
 
         print("Generated SSBO with id", self.id)
 
-    # def __init__(self):
-    #     self.id = GL.GLuint(0)
-    #     GL.glGenBuffers(1, self.id)
-    #     print("Generated SSBO with id", self.id)
-
-    # def __init__(self, data, n_bytes, usage):
-    #     self.id = GL.GLuint(0)
-
-    #     GL.glGenBuffers(1, self.id)
-    #     GL.glBindBuffer(GL.GL_SHADER_STORAGE_BUFFER, self.id)
-    #     GL.glBufferData(GL.GL_SHADER_STORAGE_BUFFER, n_bytes, data, usage)
-    #     GL.glBindBuffer(GL.GL_SHADER_STORAGE_BUFFER, 0)
-    #     print("Generated SSBO with id", self.id)
-    
-    # def __init__(self, array : np.array, usage):
-    #     self.id = GL.GLuint(0)
-
-    #     GL.glGenBuffers(1, self.id)
-    #     GL.glBindBuffer(GL.GL_SHADER_STORAGE_BUFFER, self.id)
-    #     GL.glBufferData(GL.GL_SHADER_STORAGE_BUFFER, array.nbytes, array, usage)
-    #     GL.glBindBuffer(GL.GL_SHADER_STORAGE_BUFFER, 0)
-    #     print("Generated SSBO with id", self.id)
-
     def setup_SSBO(self, data, n_bytes, usage):
         GL.glBindBuffer(GL.GL_SHADER_STORAGE_BUFFER, self.id)
         GL.glBufferData(GL.GL_SHADER_STORAGE_BUFFER, n_bytes, data, usage)
@@ -65,6 +42,56 @@ class SSBO:
 
     def get_SSBO_id(self):
         return self.id
+    
+    def read_data(self, shape, dtype):
+        """
+        Lee el contenido del buffer desde la GPU.
+        
+        Args:
+            shape (tuple): La forma del array resultante (ej. (512, 512) o (N*N,)).
+            dtype (type): El tipo de dato de numpy (ej. np.uint32, np.float32).
+            
+        Returns:
+            np.array: Un array de numpy con los datos leídos.
+        """
+        self.bind_SSBO()
+        
+        # Mapeamos el buffer de GPU a un puntero en memoria CPU (solo lectura)
+        ptr = GL.glMapBuffer(GL.GL_SHADER_STORAGE_BUFFER, GL.GL_READ_ONLY)
+        
+        if not ptr:
+            print(f"Error: No se pudo mapear el SSBO {self.id}")
+            self.unbind_SSBO()
+            return np.zeros(shape, dtype=dtype)
+
+        # Calculamos el tamaño total en bytes
+        total_bytes = np.prod(shape) * np.dtype(dtype).itemsize
+        
+        # Copiamos los datos crudos a un array de numpy
+        try:
+            data = np.frombuffer(ctypes.string_at(ptr, size=total_bytes), dtype=dtype)
+        except Exception as e:
+            print(f"Error leyendo SSBO: {e}")
+            data = np.zeros(np.prod(shape), dtype=dtype)
+        
+        # Desmapeamos y liberamos
+        GL.glUnmapBuffer(GL.GL_SHADER_STORAGE_BUFFER)
+        self.unbind_SSBO()
+        
+        return data.reshape(shape)
+
+    def print_content(self, shape, dtype, label="SSBO Data", n_print=10):
+        """
+        Imprime en consola un resumen del contenido del buffer.
+        Util para debug rápido.
+        """
+        data = self.read_data(shape, dtype)
+        flat_data = data.flatten()
+        
+        print(f"--- {label} ---")
+        print(f"Min: {np.min(data)}, Max: {np.max(data)}, Sum: {np.sum(data)}")
+        print(f"Primeros {n_print} valores: {flat_data[:n_print]}")
+        print("--------------------")
     
 
 class RenderingInstance:

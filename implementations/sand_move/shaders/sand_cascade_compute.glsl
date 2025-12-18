@@ -90,8 +90,8 @@ void main() {
             move_amount = min(move_amount, my_sand);
 
             if (move_amount > 0) {
-                atomicAdd(sand_slabs[idx_p], -int(move_amount));
-                atomicAdd(sand_slabs[idx(target_neighbor.x, target_neighbor.y)], int(move_amount));
+                atomicAdd(sand_slabs[idx_p], uint(-int(move_amount)));
+                atomicAdd(sand_slabs[idx(target_neighbor.x, target_neighbor.y)], uint(move_amount));
             }
         }
     }

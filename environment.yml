@@ -1,4 +1,4 @@
-name: grafica
+name: sandbox
 channels:
   - conda-forge
   - defaults
@@ -6,7 +6,7 @@ dependencies:
   - numpy
   - pip
   - pyopengl
-  - python
+  - python=3.11
   - mesa>=2.3.0
   - trimesh
   - networkx
@@ -23,3 +23,4 @@ dependencies:
       - pyglet>=2.0.0
       - pymunk
       - noise
+      - imgui[pyglet]
