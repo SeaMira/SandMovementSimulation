@@ -101,7 +101,6 @@ void main()
             q = ivec2(clamp(q.x - int(round(stepVec.x)), 0, N-1), clamp(q.x - int(round(stepVec.y)), 0, N-1));
             C_q = makeCell(idx(q.x, q.y));
             C_q.sand += transported_sand;
-            sand_slabs[idx(q.x, q.y)] += transported_sand;
             atomicAdd(sand_slabs[idx(q.x, q.y)], uint(transported_sand));
             return;
         }
